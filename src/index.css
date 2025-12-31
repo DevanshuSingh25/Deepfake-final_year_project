@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors - slate/ink palette */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+    
+    /* Primary - indigo accent */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - cyan accent */
+    --secondary: 189 94% 43%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    
+    --accent: 189 94% 43%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 239 84% 67%;
+    
+    --radius: 1rem;
+    
+    /* Custom gradient stops */
+    --gradient-from: 239 84% 67%;
+    --gradient-via: 220 90% 56%;
+    --gradient-to: 189 94% 43%;
+  }
+  
+  .dark {
+    /* Dark mode - deep slate base */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    
+    --card: 217 33% 17%;
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary - brighter indigo for dark */
+    --primary: 239 84% 67%;
+    --primary-foreground: 222 47% 11%;
+    
+    /* Secondary - cyan */
+    --secondary: 189 94% 43%;
+    --secondary-foreground: 222 47% 11%;
+    
+    --muted: 217 33% 20%;
+    --muted-foreground: 215 20% 65%;
+    
+    --accent: 189 94% 43%;
+    --accent-foreground: 222 47% 11%;
+    
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 217 33% 24%;
+    --input: 217 33% 24%;
+    --ring: 239 84% 67%;
+    
+    /* Dark mode gradients */
+    --gradient-from: 239 84% 67%;
+    --gradient-via: 220 90% 56%;
+    --gradient-to: 189 94% 43%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  /* Animated gradient backgrounds */
+  .bg-gradient-hero {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-from)),
+      hsl(var(--gradient-via)),
+      hsl(var(--gradient-to))
+    );
+    background-size: 200% 200%;
+  }
+  
+  .bg-gradient-card {
+    background: linear-gradient(
+      145deg,
+      hsl(var(--gradient-from) / 0.1),
+      hsl(var(--gradient-to) / 0.1)
+    );
+  }
+  
+  /* Glassmorphism effect */
+  .glass-card {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-700/30;
+  }
+  
+  .glass-card-strong {
+    @apply bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/30 dark:border-slate-700/50;
+  }
+  
+  /* Focus visible rings */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
