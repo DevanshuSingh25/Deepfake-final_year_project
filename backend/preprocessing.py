@@ -4,8 +4,9 @@ from torchvision import transforms
 import cv2
 import numpy as np
 import face_recognition
-from typing import List, Generator
+from typing import List, Generator, Tuple
 import os
+import base64
 
 
 # Image preprocessing parameters
@@ -131,17 +132,29 @@ def preprocess_video(
             cv2.imwrite(preprocessed_path, cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR))
             preprocessed_images.append(preprocessed_path)
         
-        # Face detection and cropping
-        face_locations = face_recognition.face_locations(rgb_frame)
+        # Face detection optimization: detect on downscaled frame, crop from original
+        # Using 0.25 scale factor (4x smaller) for ~4-16x speedup
+        scale_factor = 0.25
+        small_frame = cv2.resize(rgb_frame, (0, 0), fx=scale_factor, fy=scale_factor)
         
-        if len(face_locations) > 0:
-            top, right, bottom, left = face_locations[0]
-            # Apply padding
+        # Detect faces on the smaller frame
+        face_locations_small = face_recognition.face_locations(small_frame)
+        
+        if len(face_locations_small) > 0:
+            # Scale bounding box back to original resolution
+            top_small, right_small, bottom_small, left_small = face_locations_small[0]
+            top = int(top_small / scale_factor)
+            right = int(right_small / scale_factor)
+            bottom = int(bottom_small / scale_factor)
+            left = int(left_small / scale_factor)
+            
+            # Apply padding (on original resolution coordinates)
             top = max(0, top - padding)
             bottom = min(rgb_frame.shape[0], bottom + padding)
             left = max(0, left - padding)
             right = min(rgb_frame.shape[1], right + padding)
             
+            # Crop face from ORIGINAL full-resolution frame
             frame_face = rgb_frame[top:bottom, left:right]
             
             # Save cropped face if requested
@@ -150,11 +163,24 @@ def preprocess_video(
                 cv2.imwrite(face_path, cv2.cvtColor(frame_face, cv2.COLOR_RGB2BGR))
                 face_cropped_images.append(face_path)
             
+            # Create base64 encoded image for frontend display
+            # Resize to reasonable size for display (224x224)
+            display_face = cv2.resize(frame_face, (224, 224))
+            _, buffer = cv2.imencode('.jpg', cv2.cvtColor(display_face, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 85])
+            base64_face = base64.b64encode(buffer).decode('utf-8')
+            face_cropped_images.append(f"data:image/jpeg;base64,{base64_face}")
+            
             faces_found += 1
             processed_frame = frame_face
         else:
             # No face detected, use full frame
             processed_frame = rgb_frame
+            
+            # For display, resize full frame to show what was used
+            display_frame = cv2.resize(rgb_frame, (224, 224))
+            _, buffer = cv2.imencode('.jpg', cv2.cvtColor(display_frame, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 85])
+            base64_frame = base64.b64encode(buffer).decode('utf-8')
+            face_cropped_images.append(f"data:image/jpeg;base64,{base64_frame}")
         
         # Apply transforms
         transformed_frame = train_transforms(processed_frame)
@@ -172,7 +198,7 @@ def preprocess_video(
     frames_tensor = torch.stack(processed_frames[:sequence_length])
     frames_tensor = frames_tensor.unsqueeze(0)  # Add batch dimension
     
-    return frames_tensor, preprocessed_images, face_cropped_images
+    return frames_tensor, preprocessed_images, face_cropped_images, faces_found
 
 
 def predict(model, img_tensor, device: str = "cpu"):

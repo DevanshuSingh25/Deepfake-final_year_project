@@ -76,8 +76,11 @@ export interface VideoPredictionRequest {
 export interface VideoPredictionResponse {
   prediction: 'REAL' | 'FAKE';
   confidence: number;
-  preprocessedImages?: string[];
-  faceCroppedImages?: string[];
+  sequence_length: number;
+  device: string;
+  faces_found: number;
+  total_frames_analyzed: number;
+  frame_images: string[];  // Base64 encoded images
   error?: string;
 }
 

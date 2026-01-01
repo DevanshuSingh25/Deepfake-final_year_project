@@ -125,7 +125,7 @@ async def predict_video_endpoint(
         
         # Preprocess video
         print(f"⏳ Preprocessing video...")
-        frames_tensor, preprocessed_images, face_cropped_images = preprocess_video(
+        frames_tensor, preprocessed_images, face_cropped_images, faces_found = preprocess_video(
             temp_video_path,
             sequence_length,
             save_preprocessed=False  # Set to True if you want to save frames
@@ -145,12 +145,18 @@ async def predict_video_endpoint(
         print(f"✓ CONFIDENCE: {confidence:.1f}%")
         print(f"{'='*50}\n")
         
-        # Return response
+        # Return response with frame images for frontend display
+        # Limit to max 6 frames to keep response size reasonable
+        display_frames = face_cropped_images[:6] if len(face_cropped_images) > 6 else face_cropped_images
+        
         return JSONResponse(content={
             "prediction": prediction_label,
             "confidence": round(confidence, 1),
             "sequence_length": sequence_length,
-            "device": device
+            "device": device,
+            "faces_found": faces_found,
+            "total_frames_analyzed": len(face_cropped_images),
+            "frame_images": display_frames
         })
     
     except HTTPException:

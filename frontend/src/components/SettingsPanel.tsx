@@ -50,12 +50,12 @@ export function SettingsPanel({ type, settings, onChange }: SettingsPanelProps) 
               }
               className="w-full px-3 py-2 rounded-lg bg-background border border-input focus:ring-2 focus:ring-ring focus:border-ring"
             >
-              <option value="10">10 frames (84% accuracy)</option>
-              <option value="20">20 frames (90% accuracy)</option>
-              <option value="40">40 frames (95% accuracy)</option>
-              <option value="60">60 frames (97% accuracy)</option>
-              <option value="80">80 frames (97% accuracy)</option>
-              <option value="100">100 frames (97% accuracy)</option>
+              <option value="10">10 frames</option>
+              <option value="20">20 frames</option>
+              <option value="40">40 frames</option>
+              <option value="60">60 frames</option>
+              <option value="80">80 frames</option>
+              <option value="100">100 frames</option>
             </select>
             <p className="text-xs text-muted-foreground mt-1">
               Higher frame counts provide better accuracy but take longer to process
