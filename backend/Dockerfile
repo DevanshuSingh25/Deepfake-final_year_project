@@ -7,17 +7,15 @@ WORKDIR /app
 # Prevent Python from buffering stdout/stderr
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies required for OpenCV, face-recognition (dlib), and general build
+# Install system dependencies required for OpenCV and wget for downloads
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
     libgl1 \
     libglx-mesa0 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
-    libboost-all-dev \
+    libxrender1 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
@@ -31,6 +29,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Create models directory and download ML models from HuggingFace
+RUN mkdir -p models && \
+    wget -q --show-progress -O models/model_84_acc_10_frames_final_data.pt "https://huggingface.co/Devanshu2025/Deepfake-video-detection/resolve/main/model_84_acc_10_frames_final_data.pt" && \
+    wget -q --show-progress -O models/model_90_acc_20_frames_FF_data.pt "https://huggingface.co/Devanshu2025/Deepfake-video-detection/resolve/main/model_90_acc_20_frames_FF_data.pt" && \
+    wget -q --show-progress -O models/model_95_acc_40_frames_FF_data.pt "https://huggingface.co/Devanshu2025/Deepfake-video-detection/resolve/main/model_95_acc_40_frames_FF_data.pt" && \
+    wget -q --show-progress -O models/model_97_acc_60_frames_FF_data.pt "https://huggingface.co/Devanshu2025/Deepfake-video-detection/resolve/main/model_97_acc_60_frames_FF_data.pt" && \
+    wget -q --show-progress -O models/model_97_acc_80_frames_FF_data.pt "https://huggingface.co/Devanshu2025/Deepfake-video-detection/resolve/main/model_97_acc_80_frames_FF_data.pt" && \
+    wget -q --show-progress -O models/model_97_acc_100_frames_FF_data.pt "https://huggingface.co/Devanshu2025/Deepfake-video-detection/resolve/main/model_97_acc_100_frames_FF_data.pt"
 
 # Expose the port Render will use
 EXPOSE 8000

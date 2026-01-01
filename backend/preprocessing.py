@@ -3,7 +3,6 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import cv2
 import numpy as np
-import face_recognition
 from typing import List, Generator, Tuple
 import os
 import base64
@@ -21,6 +20,59 @@ train_transforms = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(MEAN, STD)
 ])
+
+# OpenCV DNN face detector (lightweight, no dlib needed)
+# Using OpenCV's built-in DNN face detector
+_face_detector = None
+
+def get_face_detector():
+    """
+    Get or initialize the OpenCV DNN face detector.
+    Uses OpenCV's built-in Caffe model for face detection.
+    """
+    global _face_detector
+    if _face_detector is None:
+        # Use OpenCV's built-in Haar Cascade as fallback (always available)
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        _face_detector = cv2.CascadeClassifier(cascade_path)
+    return _face_detector
+
+
+def detect_faces_opencv(frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    """
+    Detect faces using OpenCV's Haar Cascade detector.
+    
+    Args:
+        frame: RGB image as numpy array
+        
+    Returns:
+        List of face locations as (top, right, bottom, left) tuples
+        (same format as face_recognition library for compatibility)
+    """
+    detector = get_face_detector()
+    
+    # Convert to grayscale for Haar cascade
+    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    
+    # Detect faces
+    faces = detector.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(30, 30),
+        flags=cv2.CASCADE_SCALE_IMAGE
+    )
+    
+    # Convert from (x, y, w, h) to (top, right, bottom, left) format
+    face_locations = []
+    for (x, y, w, h) in faces:
+        top = y
+        right = x + w
+        bottom = y + h
+        left = x
+        face_locations.append((top, right, bottom, left))
+    
+    return face_locations
 
 
 class ValidationDataset(Dataset):
@@ -42,14 +94,17 @@ class ValidationDataset(Dataset):
         
         # Extract frames from video
         for i, frame in enumerate(self.frame_extract(self.video_path)):
-            # Detect face in frame
-            faces = face_recognition.face_locations(frame)
+            # Convert BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Detect face in frame using OpenCV
+            faces = detect_faces_opencv(rgb_frame)
             try:
                 top, right, bottom, left = faces[0]
-                frame = frame[top:bottom, left:right, :]
+                frame = rgb_frame[top:bottom, left:right, :]
             except (IndexError, ValueError):
                 # No face detected, use full frame
-                pass
+                frame = rgb_frame
             
             frames.append(self.transform(frame))
             
@@ -93,7 +148,7 @@ def preprocess_video(
         output_dir: Directory to save preprocessed images
     
     Returns:
-        Tuple of (preprocessed_tensor, preprocessed_images_list, face_cropped_images_list)
+        Tuple of (preprocessed_tensor, preprocessed_images_list, face_cropped_images_list, faces_found)
     """
     preprocessed_images = []
     face_cropped_images = []
@@ -132,13 +187,13 @@ def preprocess_video(
             cv2.imwrite(preprocessed_path, cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR))
             preprocessed_images.append(preprocessed_path)
         
-        # Face detection optimization: detect on downscaled frame, crop from original
-        # Using 0.25 scale factor (4x smaller) for ~4-16x speedup
-        scale_factor = 0.25
+        # Face detection using OpenCV (much lighter than dlib/face_recognition)
+        # Using scaled frame for faster detection
+        scale_factor = 0.5  # Less aggressive scaling since Haar is already fast
         small_frame = cv2.resize(rgb_frame, (0, 0), fx=scale_factor, fy=scale_factor)
         
         # Detect faces on the smaller frame
-        face_locations_small = face_recognition.face_locations(small_frame)
+        face_locations_small = detect_faces_opencv(small_frame)
         
         if len(face_locations_small) > 0:
             # Scale bounding box back to original resolution
