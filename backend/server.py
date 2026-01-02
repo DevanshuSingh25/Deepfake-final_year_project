@@ -8,13 +8,17 @@ from dotenv import load_dotenv
 from model_utils import load_model, get_device
 from preprocessing import preprocess_video, predict
 
+# Audio deepfake detection imports (separate from video pipeline)
+from audio_predict import predict_audio, AudioPredictionError
+from audio_preprocessing import AudioValidationError, AudioLoadError
+
 # Load environment variables
 load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Deepfake Detection API",
-    description="Video deepfake detection using ResNeXt + LSTM",
+    description="Video and Audio deepfake detection API",
     version="1.0.0"
 )
 
@@ -58,8 +62,9 @@ async def root():
     return {
         "status": "online",
         "service": "Deepfake Detection API",
-        "version": "1.0.0",
-        "device": get_device()
+        "version": "1.1.0",
+        "device": get_device(),
+        "capabilities": ["video", "audio"]
     }
 
 
@@ -177,6 +182,99 @@ async def predict_video_endpoint(
                 print(f"✓ Cleaned up temporary file")
             except Exception as e:
                 print(f"⚠ Warning: Could not delete temporary file: {e}")
+
+
+# =============================================================================
+# AUDIO DEEPFAKE DETECTION ENDPOINT
+# =============================================================================
+
+@app.post("/api/audio/predict")
+async def predict_audio_endpoint(file: UploadFile = File(...)):
+    """
+    Predict whether an audio file is real or fake (deepfake).
+    
+    Uses MelodyMachine/Deepfake-audio-detection-V2 (Wav2Vec2-based model).
+    
+    Args:
+        file: Audio file to analyze (WAV, MP3, FLAC, M4A, OGG supported)
+    
+    Returns:
+        JSON response with prediction result and confidence:
+        {
+            "prediction": "REAL" | "FAKE",
+            "confidence": float (0-100),
+            "model": "MelodyMachine/Deepfake-audio-detection-V2",
+            "all_scores": {"real": float, "fake": float}
+        }
+    """
+    temp_audio_path = None
+    
+    try:
+        # Validate content type
+        if file.content_type and not file.content_type.startswith('audio/'):
+            raise HTTPException(
+                status_code=400,
+                detail="File must be an audio file"
+            )
+        
+        print(f"\n{'='*50}")
+        print(f"Processing audio: {file.filename}")
+        print(f"Content type: {file.content_type}")
+        print(f"{'='*50}\n")
+        
+        # Get file extension from filename
+        file_ext = os.path.splitext(file.filename)[1] if file.filename else '.wav'
+        
+        # Save uploaded audio to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
+            shutil.copyfileobj(file.file, temp_file)
+            temp_audio_path = temp_file.name
+        
+        print(f"✓ Audio saved to: {temp_audio_path}")
+        
+        # Run audio prediction
+        print(f"⏳ Running audio deepfake detection...")
+        result = predict_audio(temp_audio_path, file.content_type)
+        
+        print(f"\n{'='*50}")
+        print(f"✓ AUDIO PREDICTION: {result['prediction']}")
+        print(f"✓ CONFIDENCE: {result['confidence']:.1f}%")
+        print(f"{'='*50}\n")
+        
+        return JSONResponse(content=result)
+    
+    except AudioValidationError as e:
+        print(f"\n❌ Audio validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except AudioLoadError as e:
+        print(f"\n❌ Audio load error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except AudioPredictionError as e:
+        print(f"\n❌ Audio prediction error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(f"\n❌ Error during audio prediction: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Audio prediction failed: {str(e)}"
+        )
+    
+    finally:
+        # Clean up temporary file
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.unlink(temp_audio_path)
+                print(f"✓ Cleaned up temporary audio file")
+            except Exception as e:
+                print(f"⚠ Warning: Could not delete temporary audio file: {e}")
 
 
 @app.get("/api/models")

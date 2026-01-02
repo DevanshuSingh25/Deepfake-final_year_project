@@ -5,3 +5,8 @@ opencv-python-headless==4.10.0.84
 pillow==11.0.0
 numpy==1.26.4
 python-dotenv==1.0.1
+
+# Audio deepfake detection dependencies
+transformers>=4.41.0
+librosa>=0.10.0
+soundfile>=0.12.0
