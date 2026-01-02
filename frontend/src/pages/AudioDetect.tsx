@@ -3,7 +3,6 @@ import { Music, RotateCcw, ShieldCheck, ShieldAlert, Loader2 } from 'lucide-reac
 import { Button } from '@/components/Button';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { MediaPreviewAudio } from '@/components/MediaPreviewAudio';
-import { SettingsPanel, AudioSettings } from '@/components/SettingsPanel';
 import { Toast, ToastType } from '@/components/Toast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card';
 import { validateAudioFile, MAX_AUDIO_SIZE } from '@/lib/validators';
@@ -27,12 +26,6 @@ export default function AudioDetect() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
-
-  const [settings, setSettings] = useState<AudioSettings>({
-    chunkSize: 'auto',
-    spectrogramMode: true,
-    noiseReduction: false,
-  });
 
   const handleFileSelect = async (selectedFile: File) => {
     const validation = validateAudioFile(selectedFile);
@@ -128,12 +121,6 @@ export default function AudioDetect() {
               disabled={isAnalyzing}
             />
 
-            <SettingsPanel
-              type="audio"
-              settings={settings}
-              onChange={setSettings}
-            />
-
             <div className="flex gap-4">
               <Button
                 onClick={handleAnalyze}
@@ -187,8 +174,8 @@ export default function AudioDetect() {
                   <div className="space-y-6">
                     {/* Prediction Result */}
                     <div className={`p-6 rounded-xl text-center ${result.prediction === 'REAL'
-                        ? 'bg-green-500/10 border border-green-500/30'
-                        : 'bg-red-500/10 border border-red-500/30'
+                      ? 'bg-green-500/10 border border-green-500/30'
+                      : 'bg-red-500/10 border border-red-500/30'
                       }`}>
                       <div className={`text-4xl font-bold mb-2 ${result.prediction === 'REAL' ? 'text-green-500' : 'text-red-500'
                         }`}>
@@ -232,11 +219,7 @@ export default function AudioDetect() {
                       </div>
                     </div>
 
-                    {/* Model Info */}
-                    <div className="p-3 rounded-lg bg-muted/50 text-center">
-                      <p className="text-xs text-muted-foreground">Model</p>
-                      <p className="text-sm font-medium truncate">{result.model}</p>
-                    </div>
+
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
