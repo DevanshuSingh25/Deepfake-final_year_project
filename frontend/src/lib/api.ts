@@ -113,3 +113,47 @@ export const predictVideo = async (
     throw new Error('Failed to connect to prediction server');
   }
 };
+
+// Audio prediction types and API
+export interface AudioPredictionRequest {
+  file: File;
+}
+
+export interface AudioPredictionResponse {
+  prediction: 'REAL' | 'FAKE';
+  confidence: number;
+  model: string;
+  all_scores: {
+    real: number;
+    fake: number;
+  };
+  error?: string;
+}
+
+export const predictAudio = async (
+  request: AudioPredictionRequest
+): Promise<AudioPredictionResponse> => {
+  const formData = new FormData();
+  formData.append('file', request.file);
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/audio/predict`, {
+      method: 'POST',
+      body: formData,
+      // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(errorData.detail || errorData.error || `Server error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data as AudioPredictionResponse;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to connect to audio prediction server');
+  }
+};
