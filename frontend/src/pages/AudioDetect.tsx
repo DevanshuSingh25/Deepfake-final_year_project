@@ -28,29 +28,38 @@ export default function AudioDetect() {
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
 
   const handleFileSelect = async (selectedFile: File) => {
-    const validation = validateAudioFile(selectedFile);
+  const validation = validateAudioFile(selectedFile);
 
-    if (!validation.valid) {
-      setToast({ type: 'error', message: validation.error! });
-      return;
-    }
+  if (!validation.valid) {
+    setToast({ type: 'error', message: validation.error! });
+    return;
+  }
 
-    setFile(selectedFile);
-    setResult(null);
+  // ADD THIS HERE
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: "audio_upload",
+    file_name: selectedFile.name,
+    file_size: (selectedFile.size / 1024 / 1024).toFixed(2) + "MB",
+    file_type: selectedFile.type
+  });
 
-    // Get audio duration
-    const dur = await getAudioDuration(selectedFile);
-    setDuration(dur);
+  setFile(selectedFile);
+  setResult(null);
 
-    // Add to recent uploads
-    storage.addRecentUpload({
-      filename: selectedFile.name,
-      type: 'audio',
-      size: selectedFile.size,
-    });
+  // Get audio duration
+  const dur = await getAudioDuration(selectedFile);
+  setDuration(dur);
 
-    setToast({ type: 'success', message: 'Audio loaded successfully' });
-  };
+  // Add to recent uploads
+  storage.addRecentUpload({
+    filename: selectedFile.name,
+    type: 'audio',
+    size: selectedFile.size,
+  });
+
+  setToast({ type: 'success', message: 'Audio loaded successfully' });
+};
 
   const handleAnalyze = async () => {
     if (!file) {
